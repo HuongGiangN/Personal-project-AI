@@ -306,16 +306,23 @@ def beam_search(start_state, beam_width=2):
         queue = sorted(next_queue)[:beam_width]
     return None
 
-def simulated_annealing(start_state, initial_temp=1000, cooling_rate=0.95, min_temp=1):
+def simulated_annealing(start_state, initial_temp=1000, cooling_rate=0.999, min_temp=0.001, max_steps=50000):
     import math
     current_state = [row[:] for row in start_state]
     path = [current_state]
     
+    best_state = current_state
+    best_path = path[:]
+    best_h = heuristic(current_state)
+
     if current_state == GOAL_STATE:
         return path
 
     temperature = initial_temp
-    while temperature > min_temp:
+    steps = 0
+
+    while temperature > min_temp and steps < max_steps:
+        steps += 1
         x, y = find_blank(current_state)
         neighbors = []
         for dx, dy in MOVES:
@@ -325,16 +332,27 @@ def simulated_annealing(start_state, initial_temp=1000, cooling_rate=0.95, min_t
                 neighbors.append(new_state)
         if not neighbors:
             break
+
         next_state = random.choice(neighbors)
         delta = heuristic(next_state) - heuristic(current_state)
+
         if delta < 0 or random.random() < math.exp(-delta / temperature):
             current_state = next_state
             path.append(current_state)
+
+            h = heuristic(current_state)
+            if h < best_h:
+                best_h = h
+                best_state = current_state
+                best_path = path[:]
+
             if current_state == GOAL_STATE:
                 return path
+
         temperature *= cooling_rate
 
-    return None
+    return best_path if best_state == GOAL_STATE else None
+
 
 def min_conflicts_search(start_state, max_steps=1000):
     current_state = [row[:] for row in start_state]
